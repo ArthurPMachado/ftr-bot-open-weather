@@ -1,0 +1,708 @@
+{
+  "name": "Bot de Clima Telegram - FTR",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        16
+      ],
+      "id": "9f9fc06e-864b-4253-8093-cfce9bfd3ba7",
+      "name": "Telegram Trigger",
+      "webhookId": "5238f973-3507-4c4f-84c0-d18292c8c90e",
+      "credentials": {
+        "telegramApi": {
+          "id": "QGLJmOywPSVb8DY0",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.messages.first()).date }}",
+                    "rightValue": "={{ $('Extract date and format message content').item.json.date }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "0b32864e-7af2-4bac-9eed-26f5a9ee4f4a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Do nothing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c6917e13-ead5-4dea-bcaf-a4cb3a713479",
+                    "leftValue": "={{ JSON.parse($json.messages.last()).date }}",
+                    "rightValue": "={{ $now.minus(6, 'seconds') }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Continue"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Wait for more messages"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "ffc7623e-a9e0-4120-a76d-3a16436598ec",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1056,
+        112
+      ],
+      "id": "c369675f-a44d-4d17-88ab-96dfb9e7cd22",
+      "name": "Wait",
+      "webhookId": "c9ad846e-81f3-4af6-8896-d70d3d066331"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6ac0cbf8-e51a-427d-9ee1-f55df725b863",
+              "leftValue": "={{ $json.messages }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "f96b8f84-76b1-47d7-81d1-3419143eff39",
+              "leftValue": "={{ $json.messages }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "array",
+                "operation": "lengthLte",
+                "rightType": "number"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        -272
+      ],
+      "id": "3061dae3-1a7d-46c7-bd4d-82e71012b951",
+      "name": "Keep Waiting"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "messages",
+        "key": "={{ $('Telegram Trigger').item.json.message.from.id }}_weather_messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        608,
+        16
+      ],
+      "id": "b5a50cb0-d1d3-4d3c-bc24-86d1d37f09bc",
+      "name": "Get Messages",
+      "credentials": {
+        "redis": {
+          "id": "GZBLMtkeeZLSg3HU",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('Telegram Trigger').item.json.message.from.id }}_weather_messages",
+        "messageData": "={{ JSON.stringify($json) }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        384,
+        16
+      ],
+      "id": "f7b8c94e-1a5c-4272-87bd-14569722230a",
+      "name": "Add To Queue",
+      "credentials": {
+        "redis": {
+          "id": "GZBLMtkeeZLSg3HU",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Telegram Trigger').item.json.message.from.id }}_weather_messages"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -80
+      ],
+      "id": "594f14e1-4cbc-4a53-8b57-5191e32542c1",
+      "name": "Erase Queue",
+      "credentials": {
+        "redis": {
+          "id": "GZBLMtkeeZLSg3HU",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c2a14db-cd6b-49d6-8a40-e9ccf40bcf48",
+              "name": "message",
+              "value": "={{ $json.messages.map(message => JSON.parse(message).content) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        -80
+      ],
+      "id": "fb572fd0-bd8f-423d-85d2-172577832a2c",
+      "name": "Extract content from messages"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0fd90810-71fa-419f-8624-59b503082d28",
+              "leftValue": "={{ $json.cod }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "3ea8a201-4ab9-411b-9b0b-9ac0fd95adf2",
+              "leftValue": "={{ $json.main.temp }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2336,
+        -48
+      ],
+      "id": "2d99c1b6-c1e3-4817-8d41-1a461dfb35c3",
+      "name": "Validate response",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c139c81f-42fb-4ad8-83cc-75a06d34301e",
+              "name": "date",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "9daf8a1b-6528-41da-a815-46f14da5673c",
+              "name": "content",
+              "value": "={{ \n  $json.message.text.normalize('NFD').replace(' ', '')\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        16
+      ],
+      "id": "fb63f80a-5b10-4545-8d5e-dbc028e0b46d",
+      "name": "Extract date and format message content"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            },
+            {
+              "name": "lang",
+              "value": "pt_br"
+            },
+            {
+              "name": "appid"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2000,
+        -64
+      ],
+      "id": "5ac787f3-00ef-4094-ad1f-23c42df67b08",
+      "name": "Get Weather1",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        16
+      ],
+      "id": "ba060ad1-d4a2-496f-8025-b4cb732676af",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "vaKsxHbKqHm5RVkn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3152,
+        -192
+      ],
+      "id": "f65ddd4f-558d-476b-ae74-99dd6a4b24d8",
+      "name": "Send a text message",
+      "webhookId": "ffc34fbb-b3ec-4b34-9e14-da61238db012",
+      "credentials": {
+        "telegramApi": {
+          "id": "QGLJmOywPSVb8DY0",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "94ee4a53-f8b0-4b47-b3a7-15bf006b85bb",
+              "name": "temp",
+              "value": "={{ $json.main.temp.toFixed(1) }}",
+              "type": "number"
+            },
+            {
+              "id": "1c6e2fa4-6467-49a4-a80c-dc18e28cb4c6",
+              "name": "city",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2496,
+        -400
+      ],
+      "id": "95ab0d7c-a573-457e-bb94-e1a0b1826944",
+      "name": "Extract temperature and city"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Gere uma resposta informando qual é a temperatura da cidade que veio na mensagem.\nPara isso quero que defina o valor como a cidade separando o estado (UF) por vírgula\n\nO envio da mensagem deve ser:\n\n- Curta e direta\n- Use um emoji aproximado de como está o tempo no ínicio da mensagem\n- A temperatura deve vir no formato Celsius - ºC usando o valor retornado\n- O texto deve ser gerado em menos de 5 segundos e não pode conter mais de 10 palavras\n\nCaso você não consiga determinar qual é a temperatura ou a cidade, deve retornar: Cidade não encontrada. Use o formato Cidade,UF com um exemplo entre parentesis]",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2800,
+        -192
+      ],
+      "id": "a0244876-5788-4ab2-9c14-914f06d13f6d",
+      "name": "Gerar resposta"
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = '';\n\nif($('Get Weather1').first().json.cod && $('Get Weather1').first().json.cod === 200) {\n  output = `A temperatura em ${$input.first().json.city} é de ${$input.first().json.temp}`\n} else {\n  output = 'Cidade não encontrada. Use o formato Cidade,UF(ex.: São Paulo,SP).'\n}\n\nreturn {output};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        -512
+      ],
+      "id": "9b505235-02de-4259-bb36-50b2c7e132f3",
+      "name": "Code in JavaScript",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        144
+      ],
+      "id": "13804dde-1cae-4863-8b1d-def619b2a468",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "vaKsxHbKqHm5RVkn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Quero que pegue o conteudo de {{ $json.message }} e extraia o que for cidade e estado, deixando no formato CIDADE,UF,PAIS e que o output seja apenas este",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1520,
+        -80
+      ],
+      "id": "47726f51-247d-4ca1-b842-66b392b7ad4b",
+      "name": "Formatar o texto para pesquisa"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract date and format message content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Keep Waiting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erase Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Messages": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add To Queue": {
+      "main": [
+        [
+          {
+            "node": "Get Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erase Queue": {
+      "main": [
+        [
+          {
+            "node": "Extract content from messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract content from messages": {
+      "main": [
+        [
+          {
+            "node": "Formatar o texto para pesquisa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate response": {
+      "main": [
+        [
+          {
+            "node": "Extract temperature and city",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gerar resposta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Extract date and format message content": {
+      "main": [
+        [
+          {
+            "node": "Add To Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weather1": {
+      "main": [
+        [
+          {
+            "node": "Validate response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Gerar resposta",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract temperature and city": {
+      "main": [
+        [
+          {
+            "node": "Gerar resposta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar resposta": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar o texto para pesquisa": {
+      "main": [
+        [
+          {
+            "node": "Get Weather1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Formatar o texto para pesquisa",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "812f1848-b398-4221-b705-53bea9d4481d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cdec702a2b7573b5d05f7caff43f916a3422098b7d6acb17fd1ab8f0e29b80b5"
+  },
+  "id": "nFjtERg5ECzKFzHn",
+  "tags": []
+}
